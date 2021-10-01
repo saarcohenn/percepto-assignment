@@ -1,4 +1,5 @@
-from flask import Flask, render_template, url_for, redirect
+from flask import Flask, request, render_template, url_for, redirect
+from flask_restful import Api, Resource, reqparse, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_security import Security, SQLAlchemyUserDatastore, UserMixin, RoleMixin, current_user, login_required
@@ -6,8 +7,14 @@ from flask_security.forms import RegisterForm
 from wtforms import StringField, TextAreaField
 from flask_wtf import FlaskForm
 from datetime import datetime
+import json
+
+import os
+os.putenv('LANG', 'en_US.UTF-8')
+os.putenv('LC_ALL', 'en_US.UTF-8')
 
 app = Flask(__name__)
+api = Api(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///forum.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -147,3 +154,29 @@ def delete_thread(id):
         return redirect(url_for('index'))
     except:
         return "There was a problem deleting the thread"
+
+
+message = ""
+message_put_args = reqparse.RequestParser()
+message_put_args.add_argument("message", type=str, help="Message Content is required", required=True)
+
+class Message(Resource):
+    def get(self):
+        return {"message": message}
+
+    def put(self):
+        global message
+        if request.data:
+            data = request.data.decode('utf-8')
+            data = json.loads(data)
+            message = data['message']
+        else:
+            message = request.form['message']
+
+        print(message)
+        return {"message": message}, 201
+
+api.add_resource(Message, "/message")
+
+if __name__ == "__main__":
+    app.run(debug=True)
